@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VESTRA - Moda con carácter</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/static/img/logo.png" type="image/png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Script JS -->
+    <script src="/static/scripts.js" defer></script>  <!-- Usamos defer para esperar a que se cargue todo el contenido -->
+    <!-- Bootstrap CSS para el Carrusel -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<!-- FLASH MESSAGES -->
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% if mensajes %}
+        <div class="flash-container">
+            {% for categoria, mensaje in mensajes %}
+                <div class="flash {{ categoria }}">
+                    {{ mensaje }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<body>
+
+<!-- NAVBAR -->
+<!-- NAVBAR -->
+<nav class="navbar">
+
+    <div class="logo-hamburger">
+        <div class="hamburger" onclick="toggleMenu()">
+            <span class="line"></span>
+            <span class="line"></span>
+            <span class="line"></span>
+        </div>
+
+        <div class="logo">
+            <a href="/" style="color:white; text-decoration:none; font-size:20px;">
+                VESTRA
+            </a>
+            <img src="/static/img/logo.png" alt="VESTRA">
+        </div>
+    </div>
+
+    <!-- SIDEBAR / MENÚ HAMBURGUESA (DINÁMICO) -->
+    <div class="slidebar" id="sidebar">
+        <button class="close-sidebar" onclick="toggleMenu()">✖</button>
+
+        <h2>Categorías</h2>
+
+        {% for categoria in categorias %}
+            <a href="{{ url_for('categoria', slug=categoria[1]) }}">
+                {{ categoria[0] }}
+            </a>
+        {% endfor %}
+    </div>
+
+    <!-- Buscador -->
+    <form class="search-bar" action="{{ url_for('buscar') }}" method="GET">
+        <input class="search-input" type="search" name="q" placeholder="Buscar productos..."
+               value="{{ request.args.get('q', '') }}">
+        <button class="search-btn" type="submit">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                fill="none" stroke="var(--color-fondo)" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="16" y1="16" x2="21" y2="21"></line>
+            </svg>
+        </button>
+    </form>
+
+
+
+    <!-- Botones Login / Cuenta -->
+    <!-- ICONO CARRITO + BOTONES -->
+<div class="auth-buttons">
+
+     <!-- ❤️ FAVORITOS -->
+    <a href="{{ url_for('ver_favoritos') }}" class="btn favoritos-btn" title="Ver favoritos">
+        <span class="emoji-fav">❤️</span>
+
+        {% if favoritos_ids|length > 0 %}
+        <span class="badge-carrito">{{ favoritos_ids|length }}</span>
+        {% endif %}
+    </a>
+
+    <!-- CARRITO (color del fondo) -->
+    <a href="{{ url_for('ver_carrito') }}" class="btn carrito-btn">
+        <i class="fa-solid fa-cart-shopping"></i>
+
+        {% if carrito_cantidad > 0 %}
+        <span class="badge-carrito">{{ carrito_cantidad }}</span>
+        {% endif %}
+    </a>
+
+    {% if session.get("usuario_id") %}
+
+        <!-- BOTÓN MI CUENTA -->
+        <a href="/panel" class="btn">Mi Cuenta</a>
+
+        {% if session.get("rol") == "admin" %}
+        <a href="/admin" class="btn" style="background:#c8a96a; color:black;">⚙ Admin</a>
+        {% endif %}
+
+        <a href="/logout" class="btn">Cerrar sesión</a>
+
+    {% else %}
+
+        <a href="/registro" class="btn">Registrarse</a>
+        <a href="/login" class="btn">Iniciar sesión</a>
+
+    {% endif %}
+
+</div>
+
+
+</nav>
+
+
+<!-- SIDEBAR -->
+<div class="slidebar" id="sidebar">
+    <button class="close-sidebar" onclick="toggleMenu()">✖</button>
+    <h2>Categorías</h2>
+    <a href="/categorias/poleras">Poleras</a>
+    <a href="/categorias/polerones">Polerones</a>
+    <a href="/categorias/pantalones">Pantalones</a>
+    <a href="/categorias/jeans">Jeans</a>
+    <a href="/categorias/zapatillas">Zapatillas</a>
+    <a href="/categorias/chaquetas">Chaquetas</a>
+    <a href="/categorias/accesorios">Accesorios</a>
+    <a href="/categorias/camisas">Camisas</a>
+    <a href="/categorias/ropa_deportiva">Ropa Deportiva</a>
+    <a href="/categorias/ropa_de_mujer">Ropa de Mujer</a>
+</div>
+
+
+
+<!-- CONTENIDO DEL CARRITO -->
+<div class="container mt-4">
+    <h2 class="mb-4">🛒 Mi Carrito</h2>
+
+    {% if items %}
+    <table class="table table-striped table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Imagen</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Subtotal</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>
+                    <img src="/static/img/{{ item[2] }}" width="70" height="70" style="object-fit:cover; border-radius:6px;">
+                </td>
+
+                <td>{{ item[1] }}</td>
+
+                <td>{{ item[3] }}</td>
+
+                <td>${{ '%.0f' | format(item[4]) }}</td>
+
+                <td>${{ '%.0f' | format(item[5]) }}</td>
+
+                <td>
+                    <form action="{{ url_for('eliminar_item_carrito', item_id=item[0]) }}" method="POST">
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+
+    <h4>Total a pagar: ${{ '%.0f' | format(total) }}</h4>
+
+    <br>
+    <a href="/checkout" class="btn btn-success btn-lg">Finalizar compra (Simulado)</a>
+
+    {% else %}
+      <p>Tu carrito está vacío.</p>
+    {% endif %}
+</div>
+
+
+
+
+
+<footer>
+    <div class="footer-content">
+
+        <!-- LOGO Y DESCRIPCIÓN -->
+        <div class="footer-section">
+            <div class="footer-logo">
+                <img src="/static/img/logo.png" alt="Logo VESTRA">
+            </div>
+            <h3>VESTRA</h3>
+            <p>Moda urbana, deportiva y casual con estilo premium.</p>
+        </div>
+
+        <!-- CATEGORÍAS LISTADAS -->
+        <div class="footer-section">
+            <h3>Categorías</h3>
+            <ul>
+                <li><a href="/categorias/poleras">Poleras</a></li>
+                <li><a href="/categorias/polerones">Polerones</a></li>
+                <li><a href="/categorias/pantalones">Pantalones</a></li>
+                <li><a href="/categorias/chaquetas">Chaquetas</a></li>
+                <li><a href="/categorias/jeans">Jeans</a></li>
+                <li><a href="/categorias/zapatillas">Zapatillas</a></li>
+            </ul>
+        </div>
+
+        <!-- NEWSLETTER -->
+        <div class="footer-section newsletter-box">
+            <h3>Newsletter</h3>
+            <p>Recibe ofertas, novedades y lanzamientos exclusivos:</p>
+
+            <input type="email" placeholder="Tu correo electrónico">
+            <button>Suscribirse</button>
+        </div>
+
+    </div>
+
+    <!-- REDES SOCIALES CENTRADAS -->
+    <div class="social-icons">
+
+        <!-- Instagram -->
+        <a href="#" title="Instagram">
+            <svg width="30" height="30" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M7 2C4.243 2 2 4.243 2 7v10c0 2.757 2.243 5 
+                        5 5h10c2.757 0 5-2.243 5-5V7c0-2.757-2.243-5-5-5H7zm10 
+                        2c1.654 0 3 1.346 3 3v10c0 1.654-1.346 
+                        3-3 3H7c-1.654 0-3-1.346-3-3V7c0-1.654 
+                        1.346-3 3-3h10zm-5 3a5 5 0 100 
+                        10 5 5 0 000-10z"/>
+            </svg>
+        </a>
+
+        <!-- Facebook -->
+        <a href="#" title="Facebook">
+            <svg width="30" height="30" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M22 12a10 10 0 10-11.5 9.9v-7h-2v-3h2v-2.3c0-2 
+                        1.2-3.1 3-3.1.9 0 1.8.1 2 
+                        .1v2.3h-1.1c-1 
+                        0-1.3.6-1.3 1.2V12h2.5l-.4 
+                        3h-2v7A10 10 0 0022 12z"/>
+            </svg>
+        </a>
+
+        <!-- Twitter -->
+        <a href="#" title="Twitter">
+            <svg width="30" height="30" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M22.46 6c-.77.35-1.6 .58-2.46 
+                        .69a4.27 4.27 0 001.88-2.37 8.52 8.52 
+                        0 01-2.71 1.03A4.22 4.22 
+                        0 0015.5 4c-2.34 
+                        0-4.23 1.9-4.23 4.23 
+                        0 .33.03.66.1.97A12 
+                        12 0 013 5.1a4.24 
+                        4.24 0 001.31 5.65 4.17 
+                        4.17 0 01-1.91-.53v.05c0 
+                        2.03 1.44 3.73 3.34 
+                        4.12a4.3 4.3 0 01-1.9.07c.54 1.69 
+                        2.11 2.93 3.97 2.97A8.48 8.48 0 
+                        012 19.54 12 12 0 
+                        008.29 21c7.55 0 11.68-6.26 
+                        11.68-11.68l-.01-.53A8.18 
+                        8.18 0 0022.46 6z"/>
+            </svg>
+        </a>
+
+    </div>
+
+    <div class="footer-bottom">
+        © 2026 VESTRA · Todos los derechos reservados.
+    </div>
+</footer>
+
+
+
+<!-- Bootstrap JS y dependencias (jQuery y Popper.js) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
+</body>
+</html>

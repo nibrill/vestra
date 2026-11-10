@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VESTRA">
+  <rect width="512" height="512" rx="112" fill="#0F172A"/>
+  <polygon points="112,150 166,150 256,300 256,372" fill="#F7F5F2"/>
+  <polygon points="400,150 346,150 256,300 256,372" fill="#C8A96A"/>
+  <rect x="176" y="404" width="160" height="10" rx="5" fill="#C8A96A"/>
+</svg>

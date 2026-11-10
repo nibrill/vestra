@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Usuario - VESTRA</title>
+    <link rel="stylesheet" href="/static/style.css">    
+</head>
+
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+    {% if mensajes %}
+        <div class="flash-container">
+            {% for categoria, mensaje in mensajes %}
+                <div class="flash {{ categoria }}">
+                    {{ mensaje }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+
+<h1>Editar Producto</h1>
+
+<form action="" method="POST" enctype="multipart/form-data">
+
+    <label>Nombre:</label><br>
+    <input type="text" name="nombre" value="{{ producto.nombre }}" required><br><br>
+
+    <label>Precio:</label><br>
+    <input type="number" step="0.01" name="precio" value="{{ producto.precio }}" required><br><br>
+
+    <label>Stock:</label><br>
+    <input type="number" name="stock" value="{{ producto.stock }}" required><br><br>
+
+    <label>Descripción:</label><br>
+    <textarea name="descripcion" required>{{ producto.descripcion }}</textarea><br><br>
+
+    <label>ID categoría:</label><br>
+    <input type="number" name="categoria_id" value="{{ producto.categoria_id }}" required><br><br>
+
+    <label>Imagen actual:</label><br>
+    <img src="{{ url_for('static', filename='img/' + producto.imagen) }}" width="100"><br><br>
+
+    <label>Nueva imagen (opcional):</label><br>
+    <input type="file" name="imagen"><br><br>
+
+    <button type="submit">Actualizar Producto</button>
+
+</form>
+
+
+<br>
+<a href="/admin/productos">Volver al panel de productos</a>
+
+</body>
+
+
+<br>
+<a href="/admin">Volver al panel</a>
