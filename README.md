@@ -1,52 +1,52 @@
-<p align="center"><img src="static/img/logo.png" width="120" alt="VESTRA logo"></p>
+<p align="center"><img src="static/img/logo.png" width="120" alt="Logo de VESTRA"></p>
 
 <h1 align="center">VESTRA</h1>
-<p align="center">Full-stack fashion e-commerce built with Flask and MySQL.<br>Open source, free to use as a learning base.</p>
+<p align="center">Tienda de ropa online full-stack hecha con Flask y MySQL.<br>Código abierto, pensado como base para aprender.</p>
 
-## Features
+## Características
 
-- **Catalog** – browse by category, search, price filter and sorting
-- **Accounts** – registration, login with bcrypt hashing, lockout after 3 failed attempts, profile, change email/password
-- **Favorites & cart** – persistent per user, live counters in the navbar
-- **Checkout & orders** – order history, order confirmation (no real payment gateway; orders are stored for demo purposes)
-- **Admin panel** – manage users, products (image upload), categories and orders
-- **Security basics** – parameterized SQL queries, input sanitizing with `bleach`, role-based access, secrets via environment variables
+- **Catálogo**: navegación por categorías, búsqueda, filtro por precio y ordenamiento
+- **Cuentas de usuario**: registro, inicio de sesión con bcrypt, bloqueo tras 3 intentos fallidos, perfil, cambio de correo y contraseña
+- **Favoritos y carrito**: persistentes por usuario, con contadores en la barra de navegación
+- **Checkout y órdenes**: historial de compras y confirmación de pedido (sin pasarela de pago real; las órdenes se guardan solo con fines de demostración)
+- **Panel de administración**: gestión de usuarios, productos (con subida de imágenes), categorías y órdenes
+- **Seguridad básica**: consultas SQL parametrizadas, sanitización con `bleach`, control de acceso por rol y secretos mediante variables de entorno
 
-## Stack
+## Tecnologías
 
 Python · Flask · MySQL/MariaDB · Jinja2 · HTML/CSS · Bootstrap · Font Awesome
 
-## Getting started
+## Puesta en marcha
 
 ```bash
 git clone https://github.com/nibrill/vestra.git
 cd vestra
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env                                  # then edit values
-mysql -u root -p < database/schema.sql                # creates the `vestra` database
-python create_admin.py "Admin" admin@example.com "a-strong-password"
+cp .env.example .env                                  # edita los valores
+mysql -u root -p < database/schema.sql                # crea la base de datos `vestra`
+python create_admin.py "Admin" admin@example.com "una-clave-segura"
 flask --app app run
 ```
 
-Export the variables from `.env` (`SECRET_KEY`, `DB_*`) in your shell before running.
+Exporta las variables de `.env` (`SECRET_KEY`, `DB_*`) en tu terminal antes de ejecutar.
 
-## Project layout
+## Estructura del proyecto
 
 ```
-app.py            Flask routes and business logic
-connection.py     MySQL connection (env-driven)
-create_admin.py   CLI to create an admin user
-database/         SQL schema and sample catalog
-templates/        Jinja2 templates
-static/           CSS, JS and images
+app.py            Rutas de Flask y lógica de negocio
+connection.py     Conexión a MySQL (configurada por entorno)
+create_admin.py   Script para crear un usuario administrador
+database/         Esquema SQL y catálogo de ejemplo
+templates/        Plantillas Jinja2
+static/           CSS, JS e imágenes
 ```
 
-## Notes
+## Notas
 
-- Sample product photos are demo placeholders; replace them with images you have rights to use before any commercial use.
-- Payments are intentionally not implemented.
+- Las fotos de los productos son de ejemplo; reemplázalas por imágenes de las que tengas derechos antes de cualquier uso comercial.
+- Los pagos no están implementados a propósito.
 
-## License
+## Licencia
 
 [MIT](LICENSE) © 2026 nibrill
