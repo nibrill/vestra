@@ -12,6 +12,14 @@
 - **Panel de administración**: gestión de usuarios, productos (con subida de imágenes), categorías y órdenes
 - **Seguridad básica**: consultas SQL parametrizadas, sanitización con `bleach`, control de acceso por rol y secretos mediante variables de entorno
 
+## Capturas
+
+| Inicio | Catálogo con filtros |
+|---|---|
+| ![Inicio](docs/screenshots/inicio.png) | ![Categoría](docs/screenshots/categoria.png) |
+| **Detalle de producto** | **Inicio de sesión** |
+| ![Producto](docs/screenshots/producto.png) | ![Login](docs/screenshots/login.png) |
+
 ## Tecnologías
 
 Python · Flask · MySQL/MariaDB · Jinja2 · HTML/CSS · Bootstrap · Font Awesome

@@ -43,8 +43,6 @@ CREATE TABLE `carrito_items` (
 -- Volcado de datos para la tabla `carrito_items`
 --
 
-INSERT INTO `carrito_items` (`id`, `usuario_id`, `producto_id`, `cantidad`, `precio_unitario`, `fecha_agregado`) VALUES
-(15, 1, 8, 3, 29990, '2025-12-22 13:36:40');
 
 -- --------------------------------------------------------
 
@@ -93,9 +91,6 @@ CREATE TABLE `favoritos` (
 -- Volcado de datos para la tabla `favoritos`
 --
 
-INSERT INTO `favoritos` (`id`, `usuario_id`, `producto_id`, `creado_en`) VALUES
-(17, 1, 10, '2025-12-22 12:54:34'),
-(19, 1, 20, '2025-12-22 13:04:19');
 
 -- --------------------------------------------------------
 
@@ -115,9 +110,6 @@ CREATE TABLE `ordenes` (
 -- Volcado de datos para la tabla `ordenes`
 --
 
-INSERT INTO `ordenes` (`id`, `usuario_id`, `total`, `estado`, `creado_en`) VALUES
-(3, 1, 12990.00, 'completada', '2025-12-16 14:30:02'),
-(6, 1, 12990.00, 'completada', '2025-12-18 14:54:18');
 
 -- --------------------------------------------------------
 
@@ -139,9 +131,6 @@ CREATE TABLE `orden_items` (
 -- Volcado de datos para la tabla `orden_items`
 --
 
-INSERT INTO `orden_items` (`id`, `orden_id`, `producto_id`, `nombre_producto`, `precio`, `cantidad`, `subtotal`) VALUES
-(3, 3, 1, 'Polera Basic Blanca', 12990.00, 1, 12990.00),
-(6, 6, 1, 'Polera Basic Blanca', 12990.00, 1, 12990.00);
 
 -- --------------------------------------------------------
 

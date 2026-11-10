@@ -53,7 +53,7 @@ p {
     margin: 15px;
     font-size: 18px;
     text-decoration: none;
-    background-color: var(--color-secundario);  /* Cambié el color para que contraste mejor */
+    background-color: #c8a96a;  /* dorado de marca */
     color: var(--color-oscuro);  /* Color de texto más oscuro para contraste */
     border-radius: 8px;
     transition: 0.3s ease;
@@ -335,6 +335,7 @@ footer {
    ============================ */
 footer {
     width: 100%;
+    opacity: 1;
     background: var(--color-oscuro);
     color: white;
     margin-top: 60px;
@@ -358,7 +359,7 @@ footer {
 
 /* Secciones */
 .footer-section h3 {
-    color: var(--color-secundario);
+    color: #c8a96a;
     margin-bottom: 12px;
     font-size: 22px;
     font-weight: bold;
