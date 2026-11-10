@@ -201,7 +201,7 @@
 
                     <!-- Total -->
                     <td class="text-end fw-semibold">
-                        $ {{ o[1] }}
+                        {{ o[1]|clp }}
                     </td>
 
                     <!-- Fecha -->
@@ -215,11 +215,10 @@
                            class="btn btn-sm btn-outline-primary">
                             Ver detalle
                         </a>
-                         <a href="/admin/ordenes/eliminar/{{ o[0] }}"
-                           class="btn btn-outline-danger btn-sm"
-                           onclick="return confirm('¿Seguro que deseas eliminar esta orden ?')">
-                            Eliminar
-                        </a>
+                         <form action="/admin/ordenes/eliminar/{{ o[0] }}" method="POST" style="display:inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta orden ?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar</button>
+                        </form>
                     </td>
 
                 </tr>

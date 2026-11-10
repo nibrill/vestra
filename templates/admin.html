@@ -186,11 +186,10 @@
                             Editar
                         </a>
 
-                        <a href="/admin/eliminar/{{ u[0] }}"
-                           class="btn btn-outline-danger btn-sm"
-                           onclick="return confirm('¿Seguro que deseas eliminar este usuario?')">
-                            Eliminar
-                        </a>
+                        <form action="/admin/eliminar/{{ u[0] }}" method="POST" style="display:inline" onsubmit="return confirm('¿Seguro que deseas eliminar este usuario?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar</button>
+                        </form>
                     </td>
 
                 </tr>

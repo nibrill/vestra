@@ -160,7 +160,7 @@
             <h2>{{ producto[1] }}</h2>
             <p class="text-muted">Categoría: {{ producto[6] }}</p>
 
-            <h4>$ {{ producto[3] }}</h4>
+            <h4>{{ producto[3]|clp }}</h4>
 
             <p>{{ producto[2] }}</p>
 
@@ -170,6 +170,7 @@
                 <!-- CARRITO -->
                 <form action="{{ url_for('agregar_carrito', producto_id=producto[0]) }}"
                       method="POST" class="form-action">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-carrito">
                         <i class="fa-solid fa-cart-shopping"></i> Agregar
                     </button>
@@ -178,6 +179,7 @@
                 <!-- FAVORITOS -->
                 <form action="{{ url_for('toggle_favorito', producto_id=producto[0]) }}"
                       method="POST" class="form-action">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit"
                             class="btn-favorito {% if producto[0] in favoritos_ids %}activo{% endif %}"
                             title="Agregar a favoritos">

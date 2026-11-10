@@ -147,6 +147,7 @@
     <h2>✉️ Cambiar correo</h2>
 
     <form action="/editar-correo" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Correo actual:</label>
         <input type="email" value="{{ usuario.correo }}" disabled>
 

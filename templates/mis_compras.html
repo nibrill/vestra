@@ -151,7 +151,7 @@
     {% for o in ordenes %}
     <div class="card mb-3 p-3">
         <p><strong>Orden #{{ o[0] }}</strong></p>
-        <p> Total: $ {{ o[1] }}</p>
+        <p> Total: {{ o[1]|clp }}</p>
         <p> Estado:  {{ o[2] }}</p>
         <p> Fecha: {{ o[3] }}</p>
     </div>

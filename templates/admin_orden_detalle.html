@@ -171,6 +171,7 @@
                 <td>
                     <form action="{{ url_for('editar_estado_orden', id=orden.id) }}"
                           method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                         <select name="estado"
                                 class="form-select form-select-sm estado-select estado-{{ orden.estado }}"
@@ -179,6 +180,11 @@
                             <option value="pendiente"
                                 {% if orden.estado == 'pendiente' %}selected{% endif %}>
                                 🟡 Pendiente
+                            </option>
+
+                            <option value="confirmada"
+                                {% if orden.estado == 'confirmada' %}selected{% endif %}>
+                                🔵 Confirmada
                             </option>
 
                             <option value="completada"
@@ -197,7 +203,7 @@
                 </td>
 
                 <td class="text-end fw-bold">
-                    $ {{ orden.total }}
+                    {{ orden.total|clp }}
                 </td>
             </tr>
         </tbody>
@@ -228,8 +234,8 @@
                 <tr class="table-row-animate">
                     <td>{{ item.producto }}</td>
                     <td class="text-center">{{ item.cantidad }}</td>
-                    <td class="text-end">$ {{ item.precio }}</td>
-                    <td class="text-end fw-semibold">$ {{ item.subtotal }}</td>
+                    <td class="text-end">{{ item.precio|clp }}</td>
+                    <td class="text-end fw-semibold">{{ item.subtotal|clp }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

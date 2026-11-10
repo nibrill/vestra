@@ -145,9 +145,10 @@
 
 
     <div class="form-container">
-        <h1>inicio de sesion</h1>
+        <h1>Iniciar sesión</h1>
 
 <form action="/login" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   <input type="email" name="correo" placeholder="Ingresa tu correo" required>
   <input type="password" name="password" placeholder="Ingresa tu contraseña" required>
   <button>Ingresar</button>

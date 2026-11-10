@@ -1,20 +1,96 @@
-from flask import Flask, request, render_template, session, redirect, flash, abort, url_for
-from connection import get_connection
-import bcrypt
-from datetime import timedelta
-import bleach
-from werkzeug.utils import secure_filename
+import hmac
 import os
+import secrets
+import uuid
+from datetime import timedelta
+
+import bcrypt
+import bleach
+from flask import (Flask, abort, flash, redirect, render_template, request,
+                   session, url_for)
+from werkzeug.utils import secure_filename
+
+from connection import get_connection
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)
 app.permanent_session_lifetime = timedelta(days=7)
-UPLOAD_FOLDER = "static/img"
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-ALOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+app.config.update(
+    UPLOAD_FOLDER=os.path.join(app.root_path, "static", "img"),
+    MAX_CONTENT_LENGTH=5 * 1024 * 1024,  # 5 MB por subida
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("COOKIE_SECURE") == "1",
+)
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+ESTADOS_ORDEN = {"pendiente", "confirmada", "completada", "cancelada"}
+ROLES = {"usuario", "admin"}
+
 
 def allowed_file(filename):
-    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALOWED_EXTENSIONS
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def save_upload(file_storage):
+    """Guarda una imagen con nombre unico y devuelve el nombre, o None si es invalida."""
+    if not file_storage or not file_storage.filename or not allowed_file(file_storage.filename):
+        return None
+    name = f"{uuid.uuid4().hex[:12]}_{secure_filename(file_storage.filename)}"
+    file_storage.save(os.path.join(app.config["UPLOAD_FOLDER"], name))
+    return name
+
+
+# ---- CSRF, cabeceras y utilidades --------------------------------------
+def csrf_token():
+    if "_csrf" not in session:
+        session["_csrf"] = secrets.token_hex(16)
+    return session["_csrf"]
+
+
+@app.before_request
+def verificar_csrf():
+    if request.method == "POST":
+        enviado = request.form.get("csrf_token", "")
+        esperado = session.get("_csrf", "")
+        if not esperado or not hmac.compare_digest(enviado, esperado):
+            abort(400, "Token CSRF inválido o expirado. Recarga la página e inténtalo de nuevo.")
+
+
+@app.after_request
+def cabeceras_seguridad(resp):
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return resp
+
+
+@app.template_filter("clp")
+def formato_clp(valor):
+    """12990 -> $12.990 (formato chileno)."""
+    try:
+        return "$" + f"{int(valor):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return valor
+
+
+def requiere_admin():
+    if session.get("rol") != "admin":
+        abort(403)
+
+
+@app.errorhandler(400)
+@app.errorhandler(403)
+@app.errorhandler(404)
+@app.errorhandler(413)
+def error_pagina(e):
+    textos = {
+        400: ("Solicitud inválida", getattr(e, "description", "")),
+        403: ("Acceso denegado", "No tienes permisos para ver esta página."),
+        404: ("Página no encontrada", "No pudimos encontrar lo que buscas."),
+        413: ("Archivo demasiado grande", "El límite es de 5 MB."),
+    }
+    titulo, detalle = textos.get(e.code, ("Error", ""))
+    return render_template("error.html", codigo=e.code, titulo=titulo, detalle=detalle), e.code
 
 def correo_valido(correo):
     return "@" in correo and "." in correo
@@ -70,7 +146,7 @@ def login():
         cursor.execute(sql_reset, (correo,))
         conn.commit()
 
-        # 🟦 GUARDAR SESIÓN
+        session.clear()  # evita fijacion de sesion
         session["usuario_id"] = usuario["id"]
         session["usuario_nombre"] = usuario["nombre"]
         session["usuario_correo"] = usuario["correo"]
@@ -78,7 +154,7 @@ def login():
         # 🔥 Esto mantiene la sesión activa por días
         session.permanent = True
 
-        flash(bleach.clean(f"Hola {usuario["nombre"]} "), "success")
+        flash(f"Hola {usuario['nombre']}", "success")
         return redirect("/panel")
 
     return render_template("login.html")
@@ -176,10 +252,11 @@ def editar_correo():
     usuario = cursor.fetchone()
 
     if request.method =="POST":
-        nuevo_correo = request.form.get("nuevo_correo")
+        nuevo_correo = bleach.clean(request.form.get("nuevo_correo", "")).strip()
 
-        if "@" not in nuevo_correo or "." not in nuevo_correo:
-            return "Correo invalido"
+        if not correo_valido(nuevo_correo):
+            flash("El correo ingresado no es válido.", "error")
+            return redirect("/editar-correo")
         
         cursor.execute("SELECT id FROM usuarios WHERE correo = %s", (nuevo_correo,))
         
@@ -231,32 +308,7 @@ def ver_carrito():
     return render_template("carrito.html", items=items, total=total)
 
 
-@app.context_processor
-def inject_cart_count():
-    cantidad = 0
 
-    if "usuario_id" in session:
-        usuario_id = session["usuario_id"]
-
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT COALESCE(SUM(cantidad), 0)
-            FROM carrito_items
-            WHERE usuario_id = %s
-        """, (usuario_id,))
-        
-        result = cursor.fetchone()
-        if result:
-            cantidad = result[0]
-
-        cursor.close()
-        conn.close()
-
-    return dict(carrito_cantidad=cantidad)
-
-
-   
 @app.route("/editar-password", methods=["GET", "POST"])
 def editar_password():
     if "usuario_id" not in session:
@@ -316,8 +368,7 @@ def logout():
 
 @app.route("/admin")
 def admin_panel():
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -332,8 +383,7 @@ def admin_panel():
 @app.route("/admin/editar/<id>", methods=["GET","POST"])
 def editar_usuario(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -347,6 +397,8 @@ def editar_usuario(id):
     nombre = bleach.clean(request.form["nombre"])  # Sanitizar nombre
     correo = bleach.clean(request.form["correo"])  # Sanitizar correo
     rol = request.form["rol"]
+    if rol not in ROLES:
+        abort(400, "Rol inválido.")
 
 
     cursor.execute("""
@@ -363,16 +415,10 @@ def editar_usuario(id):
 
 
 
-@app.route("/admin/productos/eliminar/<id>")
+@app.route("/admin/productos/eliminar/<int:id>", methods=["POST"])
 def admin_eliminar_produto(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
-
-    # Evitar que el admin se auto borre
-    if str(session.get("usuario_id")) == str(id):
-        flash("No puedes eliminar tu propia cuenta", "error")
-        return redirect("/admin")
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -385,11 +431,10 @@ def admin_eliminar_produto(id):
     flash("Producto eliminado correctamente", "success")
     return redirect("/admin/productos")
 
-@app.route("/admin/eliminar/<id>")
+@app.route("/admin/eliminar/<int:id>", methods=["POST"])
 def admin_eliminar(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     # Evitar que el admin se auto borre
     if str(session.get("usuario_id")) == str(id):
@@ -411,8 +456,7 @@ def admin_eliminar(id):
 @app.route("/admin/productos", methods=["GET","POST"])
 def admin_producto():
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -431,8 +475,7 @@ def admin_producto():
 @app.route("/admin/productos/editar/<id>", methods=["GET","POST"])
 def admin_editar_producto(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -456,10 +499,12 @@ def admin_editar_producto(id):
     imagen_file = request.files.get("imagen")
 
     if imagen_file and imagen_file.filename != "":
-        from werkzeug.utils import secure_filename
-        filename = secure_filename(imagen_file.filename)
-        ruta = os.path.join("static/img", filename)
-        imagen_file.save(ruta)
+        filename = save_upload(imagen_file)
+        if not filename:
+            flash("Tipo de archivo no permitido (usa png, jpg, gif o webp).", "error")
+            cursor.close()
+            conn.close()
+            return redirect(request.url)
     else:
         # si no cambia la imagen tomamos la existente
         cursor.execute("SELECT imagen FROM productos WHERE id = %s", (id,))
@@ -481,8 +526,7 @@ def admin_editar_producto(id):
 @app.route("/admin/categorias", methods=["GET","POST"])
 def admin_categoria():
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -498,8 +542,7 @@ def admin_categoria():
 @app.route("/admin/categorias/editar/<id>", methods=["GET","POST"])
 def editar_categoria(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -540,6 +583,8 @@ def buscar():
         """)
 
     else:
+        escapado = termino.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        patron = f"%{escapado}%"
         cursor.execute("""
             SELECT p.id, p.nombre, p.precio, p.imagen,
                    c.nombre AS categoria
@@ -548,11 +593,7 @@ def buscar():
             WHERE p.nombre LIKE %s
                OR p.descripcion LIKE %s
                OR c.nombre LIKE %s
-        """, (
-            f"%{termino}%",
-            f"%{termino}%",
-            f"%{termino}%"
-        ))
+        """, (patron, patron, patron))
 
     productos = cursor.fetchall()
 
@@ -567,8 +608,7 @@ def buscar():
 @app.route("/admin/productos/agregar", methods=["GET","POST"])
 def admin_producto_agregar():
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     if request.method == "POST":
         nombre = request.form["nombre"]
@@ -587,16 +627,12 @@ def admin_producto_agregar():
         
         imagen = request.files["imagen"]
         if imagen.filename == "":
-            flash("No se seleciono ninguna imagen")
+            flash("No se seleccionó ninguna imagen", "error")
             return redirect(request.url)
         
-        if imagen and allowed_file(imagen.filename):
-            filename = secure_filename(imagen.filename)
-            ruta_guardado = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            imagen.save(ruta_guardado)
-
-        else:
-            flash("tipo de archivo no permitido")
+        filename = save_upload(imagen)
+        if not filename:
+            flash("Tipo de archivo no permitido (usa png, jpg, gif o webp).", "error")
             return redirect(request.url)
         
         conn = get_connection()
@@ -747,41 +783,7 @@ def ver_favoritos():
     conn.close()
     return render_template("favoritos.html", productos=favoritos)
 
-@app.context_processor
-def inject_favoritos_id():
-    favoritos_ids = []
 
-    if "usuario_id" in session:
-        usuario_id = session["usuario_id"]
-
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT producto_id
-            FROM favoritos
-            WHERE usuario_id = %s
-        """, (usuario_id,))
-        
-        favoritos_ids = [row[0] for row in cursor.fetchall()]
-
-        cursor.close()
-        conn.close()
-
-    return dict(favoritos_ids=favoritos_ids)
-
-@app.context_processor
-def inject_favoritos_count():
-    total = 0
-    if "user_id" in session:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""SELECT COUNT(*)
-                       FROM favoritos WHERE usuario_id = %s""", (session["user_id"],))
-        total = cursor.fetchone()[0]
-        cursor.close()
-        conn.close()
-    return dict(favoritos_count=total)
-    
 
 @app.route("/producto/<int:producto_id>")
 def producto_detalle(producto_id): 
@@ -835,91 +837,93 @@ def perfil():
     
     return render_template("perfil.html", usuario=usuario, ordenes=ordenes, compras=compras)
 
-@app.route("/checkout", methods=["GET","POST"])
-def checkout(): 
+@app.route("/checkout", methods=["GET", "POST"])
+def checkout():
     if "usuario_id" not in session:
         return redirect("/login")
-    
-    usuario_id = session["usuario_id"]
 
+    usuario_id = session["usuario_id"]
     conn = get_connection()
     cursor = conn.cursor()
+    try:
+        # FOR UPDATE bloquea los productos para que dos compras no vendan el mismo stock
+        cursor.execute("""SELECT ci.producto_id, p.nombre, ci.cantidad, p.precio,
+                                 (ci.cantidad * p.precio) AS subtotal, p.stock
+                          FROM carrito_items ci
+                          JOIN productos p ON ci.producto_id = p.id
+                          WHERE ci.usuario_id = %s
+                          FOR UPDATE""", (usuario_id,))
+        items = cursor.fetchall()
 
-    cursor.execute(""" SELECT ci.producto_id, p.nombre, ci.cantidad, ci.precio_unitario,(ci.cantidad * ci.precio_unitario) AS subtotal
-                    FROM carrito_items ci
-                   JOIN productos p ON ci.producto_id = p.id
-                   WHERE ci.usuario_id = %s""",(usuario_id,))
-    items = cursor.fetchall()
+        if not items:
+            conn.rollback()
+            flash("Tu carrito está vacío.", "warning")
+            return redirect(url_for("ver_carrito"))
 
-    if not items:
-        flash("Tu carrito esta vacio.", "warning")
-        return redirect(url_for("ver_carrito"))
+        total = sum(item[4] for item in items)
 
-    total = sum(item[4] for item in items)
+        if request.method == "POST":
+            for item in items:
+                if item[2] > item[5]:
+                    conn.rollback()
+                    flash(f"Stock insuficiente para {item[1]} (quedan {item[5]}).", "error")
+                    return redirect(url_for("ver_carrito"))
 
+            cursor.execute("INSERT INTO ordenes (usuario_id, total) VALUES (%s, %s)",
+                           (usuario_id, total))
+            orden_id = cursor.lastrowid
+            for item in items:
+                cursor.execute("""INSERT INTO orden_items
+                                  (orden_id, producto_id, nombre_producto, precio, cantidad, subtotal)
+                                  VALUES (%s, %s, %s, %s, %s, %s)""",
+                               (orden_id, item[0], item[1], item[3], item[2], item[4]))
+                cursor.execute("UPDATE productos SET stock = stock - %s WHERE id = %s",
+                               (item[2], item[0]))
+            cursor.execute("DELETE FROM carrito_items WHERE usuario_id = %s", (usuario_id,))
+            conn.commit()
 
-    if request.method == "POST":
-        cursor.execute("""INSERT INTO ordenes (usuario_id, total)
-                       VALUES (%s, %s)""", (usuario_id, total))
-        orden_id = cursor.lastrowid
+            flash("Compra realizada con éxito", "success")
+            return redirect(url_for("orden_confirmada", orden_id=orden_id))
 
-
-        for item in items:
-
-         cursor.execute("""INSERT INTO orden_items
-                       (orden_id, producto_id, nombre_producto, precio, cantidad, subtotal)
-                       VALUES (%s, %s, %s, %s, %s, %s)""", (orden_id, item[0], item[1], item[3], item[2], item[4]))
-         
-        cursor.execute("""DELETE FROM carrito_items
-                       WHERE usuario_id = %s""", (usuario_id,))
-        
-       # BAJAR STOCK DEL PRODUCTO
-        cursor.execute("""
-        UPDATE productos
-        SET stock = stock - %s
-        WHERE id = %s AND stock >= %s
-        """, (item[2], item[0], item[2]))
-
-        cursor.execute("""
-          SELECT stock
-          FROM productos
-          WHERE id = %s
-         """, (item[0],))
-
-        stock_actual = cursor.fetchone()[0]
-
-        if item[2] > stock_actual:
-         flash(f"Stock insuficiente para {item[1]}", "error")
-         return redirect(url_for("ver_carrito"))
-
- 
-        conn.commit()
+        conn.rollback()
+        items_vista = [i[:5] for i in items]
+        return render_template("checkout.html", items=items_vista, total=total)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
         cursor.close()
         conn.close()
 
-        flash("Compra realizada con exito", "success")
-        return redirect(url_for("orden_confirmada", orden_id=orden_id))
-    
-    cursor.close()
-    conn.close()
-
-    return render_template("checkout.html", items=items, total=total)
 
 @app.route("/orden-confirmada/<int:orden_id>")
 def orden_confirmada(orden_id):
+    if "usuario_id" not in session:
+        return redirect("/login")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM ordenes WHERE id = %s AND usuario_id = %s",
+                   (orden_id, session["usuario_id"]))
+    existe = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not existe:
+        abort(404)
     return render_template("orden_confirmada.html", orden_id=orden_id)
 
 @app.route("/mis-compras")
 def mis_compras():
+    if "usuario_id" not in session:
+        return redirect("/login")
 
     conn = get_connection()
-    cursor= conn.cursor()
-
+    cursor = conn.cursor()
     cursor.execute("""SELECT id, total, estado, creado_en
-                   FROM ordenes 
+                   FROM ordenes
                    WHERE usuario_id = %s
-                   ORDER BY creado_en DESC """,(session["usuario_id"], ))
-    ordenes = cursor.close()
+                   ORDER BY creado_en DESC""", (session["usuario_id"],))
+    ordenes = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     return render_template("mis_compras.html", ordenes=ordenes)
@@ -967,8 +971,7 @@ def historial():
 @app.route("/admin/ordenes")
 def admin_ordenes():
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -996,8 +999,7 @@ def admin_ordenes():
 @app.route("/admin/orden/<int:orden_id>")
 def admin_orden_detalle(orden_id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
@@ -1020,6 +1022,7 @@ def admin_orden_detalle(orden_id):
     if not orden:
         cursor.close()
         conn.close()
+        abort(404)
 
     cursor.execute("""SELECT id, nombre_producto AS producto, precio,subtotal, cantidad
                    FROM orden_items 
@@ -1032,11 +1035,10 @@ def admin_orden_detalle(orden_id):
 
 
 
-@app.route("/admin/ordenes/eliminar/<int:id>")
+@app.route("/admin/ordenes/eliminar/<int:id>", methods=["POST"])
 def admin_eliminar_orden(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -1064,8 +1066,7 @@ def admin_eliminar_orden(id):
 @app.route("/admin/orden/<int:id>/estado", methods=["POST"])
 def editar_estado_orden(id):
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -1073,8 +1074,8 @@ def editar_estado_orden(id):
     # POST (FORMA CORRECTA)
     nuevo_estado = request.form.get("estado")
 
-    if not nuevo_estado:
-        flash("Estado inválido", "danger")
+    if nuevo_estado not in ESTADOS_ORDEN:
+        flash("Estado inválido", "error")
         return redirect(url_for("admin_orden_detalle", orden_id=id))
 
     cursor.execute("""
@@ -1148,29 +1149,11 @@ def categoria(slug):
     )
 
 
-@app.context_processor
-def inject_carrito_ids():
-    carrito_ids = []
-
-    if "usuario_id" in session:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT producto_id
-            FROM carrito_items
-            WHERE usuario_id = %s
-        """, (session["usuario_id"],))
-        carrito_ids = [row[0] for row in cursor.fetchall()]
-        cursor.close()
-        conn.close()
-
-    return dict(carrito_ids=carrito_ids)
 
 @app.route("/admin/categorias/agregar", methods=["GET","POST"])
 def admin_categorias_agregar():
 
-    if session.get("rol") != "admin":
-        abort(403)
+    requiere_admin()
 
     if request.method == "POST":
         nombre = request.form["nombre"]
@@ -1196,25 +1179,34 @@ def admin_categorias_agregar():
     return render_template("agregar_categoria.html")
 
    
+
+
 @app.context_processor
-def inject_categorias():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT nombre, slug
-        FROM categorias
-        ORDER BY nombre ASC
-    """)
-
-    categorias = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return dict(categorias=categorias)
-
-
+def contexto_global():
+    """Una sola conexion por render: categorias, carrito y favoritos del usuario."""
+    ctx = {"csrf_token": csrf_token, "categorias": [], "carrito_cantidad": 0,
+           "carrito_ids": [], "favoritos_ids": [], "favoritos_count": 0}
+    try:
+        conn = get_connection()
+    except Exception:
+        return ctx
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT nombre, slug FROM categorias ORDER BY nombre ASC")
+        ctx["categorias"] = cur.fetchall()
+        uid = session.get("usuario_id")
+        if uid:
+            cur.execute("SELECT producto_id, cantidad FROM carrito_items WHERE usuario_id = %s", (uid,))
+            filas = cur.fetchall()
+            ctx["carrito_ids"] = [f[0] for f in filas]
+            ctx["carrito_cantidad"] = int(sum(f[1] for f in filas))
+            cur.execute("SELECT producto_id FROM favoritos WHERE usuario_id = %s", (uid,))
+            ctx["favoritos_ids"] = [f[0] for f in cur.fetchall()]
+            ctx["favoritos_count"] = len(ctx["favoritos_ids"])
+        cur.close()
+    finally:
+        conn.close()
+    return ctx
 
 
 if __name__ == "__main__":

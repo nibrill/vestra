@@ -21,6 +21,7 @@
 
 <h1>Editar Usuario</h1>
 <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Nombre:</label><br>
     <input type="text" name="nombre" value="{{ usuario['nombre'] }}"><br><br>
 
@@ -29,7 +30,7 @@
 
     <label>Rol:</label><br>
     <select name="rol">
-        <option value="user" {% if usuario[3]=='user' %}selected{% endif %}>Usuario</option>
+        <option value="usuario" {% if usuario[3]=='usuario' %}selected{% endif %}>Usuario</option>
         <option value="admin" {% if usuario[3]=='admin' %}selected{% endif %}>Administrar</option>
     </select><br><br>
 

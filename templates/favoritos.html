@@ -173,11 +173,12 @@
         <div class="card-body text-center d-flex flex-column">
 
             <h5 class="card-title">{{ p[1] }}</h5>
-            <p class="precio mb-3">$ {{ p[2] }}</p>
+            <p class="precio mb-3">{{ p[2]|clp }}</p>
 
             <!-- Acciones -->
             <form action="{{ url_for('toggle_favorito', producto_id=p[0]) }}"
                   method="POST" class="mt-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-outline-danger btn-sm w-100">
                     ❤️ Quitar de favoritos
                 </button>

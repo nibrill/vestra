@@ -163,15 +163,16 @@
             <tr>
                 <td>{{ i[1] }}</td>
                 <td>{{ i[2] }}</td>
-                <td>$ {{ i[3] }}</td>
-                <td>$ {{ i[4] }}</td>
+                <td>{{ i[3]|clp }}</td>
+                <td>{{ i[4]|clp }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-    <h4>Total: $ {{ total }}</h4>
+    <h4>Total: {{ total|clp }}</h4>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn btn-success">
             Confirmar compra (simulado)
         </button>

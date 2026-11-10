@@ -976,10 +976,10 @@ footer {
     min-height: 450px;
 
     background-image: url("/static/img/hero.webp");
-    background-size: contain;
+    background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    background-color: #000; /* fondo por si sobra espacio */
+    background-color: #0f172a;
 
     display: flex;
     align-items: center;
@@ -2287,4 +2287,32 @@ footer {
 
 .producto-card:hover img {
     transform: scale(1.05);
+}
+
+
+/* ================================
+   OVERRIDES BOOTSTRAP -> MARCA VESTRA
+   ================================= */
+.btn-primary {
+    background-color: var(--color-oscuro);
+    border-color: var(--color-oscuro);
+    color: #fff;
+}
+.btn-primary:hover, .btn-primary:focus {
+    background-color: #1e293b;
+    border-color: #1e293b;
+    color: #fff;
+}
+.btn-outline-primary {
+    color: var(--color-oscuro);
+    border-color: var(--color-oscuro);
+}
+.btn-outline-primary:hover {
+    background-color: var(--color-oscuro);
+    border-color: var(--color-oscuro);
+    color: #fff;
+}
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid #c8a96a;
+    outline-offset: 2px;
 }

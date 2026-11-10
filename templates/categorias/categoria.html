@@ -202,7 +202,7 @@
                     <div class="producto-info">
                         <h3 class="producto-nombre">{{ producto[1] }}</h3>
                         <p class="producto-precio">
-                            $ {{ "{:,}".format(producto[3]).replace(",", ".") }}
+                            {{ producto[3]|clp }}
                         </p>
                     </div>
 
@@ -213,6 +213,7 @@
                         <form action="{{ url_for('agregar_carrito', producto_id=producto[0]) }}"
                               method="POST"
                               class="form-action">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <button type="submit"
                                     class="btn-cart {% if producto[0] in carrito_ids %}in-cart{% endif %}">
@@ -232,6 +233,7 @@
                         <form action="{{ url_for('toggle_favorito', producto_id=producto[0]) }}"
                               method="POST"
                               class="form-action fav-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <button type="submit"
                                     class="btn-fav {% if producto[0] in favoritos_ids %}active{% endif %}">

@@ -181,7 +181,7 @@
                             </span>
                         </td>
                         <td class="text-end fw-bold">
-                            $ {{ orden.total }}
+                            {{ orden.total|clp }}
                         </td>
                     </tr>
 
@@ -205,8 +205,8 @@
                     <tr class="table-row-animate">
                         <td>{{ item.nombre_producto }}</td>
                         <td class="text-center">{{ item.cantidad }}</td>
-                        <td class="text-end">$ {{ item.precio }}</td>
-                        <td class="text-end fw-semibold">$ {{ item.subtotal }}</td>
+                        <td class="text-end">{{ item.precio|clp }}</td>
+                        <td class="text-end fw-semibold">{{ item.subtotal|clp }}</td>
                     </tr>
                     {% endfor %}
 

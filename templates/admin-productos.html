@@ -180,7 +180,7 @@
                     <td><strong>{{ producto[1] }}</strong></td>
                     <td>{{ producto[2] }}</td>
 
-                    <td class="text-end">$ {{ producto[3] }}</td>
+                    <td class="text-end">{{ producto[3]|clp }}</td>
 
                     <td class="text-center">
                         {% if producto[4] > 0 %}
@@ -204,11 +204,10 @@
                             Editar
                         </a>
 
-                        <a href="/admin/productos/eliminar/{{ producto[0] }}"
-                           class="btn btn-outline-danger btn-sm"
-                           onclick="return confirm('¿Eliminar este producto?')">
-                            Eliminar
-                        </a>
+                        <form action="/admin/productos/eliminar/{{ producto[0] }}" method="POST" style="display:inline" onsubmit="return confirm('¿Eliminar este producto?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Eliminar</button>
+                        </form>
                     </td>
 
                 </tr>

@@ -147,6 +147,7 @@
         <h1>formulario de registro</h1>
 
 <form action="/registro" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="text" name="nombre" placeholder="Ingresa tu nombre" required>
     <input type="email" name="correo" placeholder="Ingresa tu correo" required>
     <input type="password" name="password" placeholder="Ingresa tu contraseña" required>

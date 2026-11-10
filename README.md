@@ -10,15 +10,19 @@
 - **Favoritos y carrito**: persistentes por usuario, con contadores en la barra de navegación
 - **Checkout y órdenes**: historial de compras y confirmación de pedido (sin pasarela de pago real; las órdenes se guardan solo con fines de demostración)
 - **Panel de administración**: gestión de usuarios, productos (con subida de imágenes), categorías y órdenes
-- **Seguridad básica**: consultas SQL parametrizadas, sanitización con `bleach`, control de acceso por rol y secretos mediante variables de entorno
+- **Seguridad**: protección CSRF en todos los formularios, acciones destructivas solo por POST, consultas SQL parametrizadas, sanitización con `bleach`, control de acceso por rol, subidas de imágenes validadas con nombre único y límite de 5 MB, sesiones regeneradas al iniciar sesión, cabeceras de seguridad y secretos por variables de entorno
+- **Compra atómica**: el checkout bloquea el stock (`SELECT ... FOR UPDATE`), valida disponibilidad y descuenta todo en una sola transacción
+- **Pruebas automáticas**: suite de `pytest` ejecutada en GitHub Actions contra MariaDB
 
 ## Capturas
 
 | Inicio | Catálogo con filtros |
 |---|---|
 | ![Inicio](docs/screenshots/inicio.png) | ![Categoría](docs/screenshots/categoria.png) |
-| **Detalle de producto** | **Inicio de sesión** |
-| ![Producto](docs/screenshots/producto.png) | ![Login](docs/screenshots/login.png) |
+| **Detalle de producto** | **Carrito** |
+| ![Producto](docs/screenshots/producto.png) | ![Carrito](docs/screenshots/carrito.png) |
+| **Panel admin: productos** | **Panel admin: órdenes** |
+| ![Admin productos](docs/screenshots/admin-productos.png) | ![Admin órdenes](docs/screenshots/admin-ordenes.png) |
 
 ## Tecnologías
 
@@ -37,7 +41,14 @@ python create_admin.py "Admin" admin@example.com "una-clave-segura"
 flask --app app run
 ```
 
-Exporta las variables de `.env` (`SECRET_KEY`, `DB_*`) en tu terminal antes de ejecutar.
+Define también `COOKIE_SECURE=1` si sirves el sitio con HTTPS. Exporta las variables de `.env` (`SECRET_KEY`, `DB_*`) en tu terminal antes de ejecutar.
+
+## Pruebas
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q          # requiere la base `vestra` cargada y las variables DB_* configuradas
+```
 
 ## Estructura del proyecto
 
@@ -45,6 +56,7 @@ Exporta las variables de `.env` (`SECRET_KEY`, `DB_*`) en tu terminal antes de e
 app.py            Rutas de Flask y lógica de negocio
 connection.py     Conexión a MySQL (configurada por entorno)
 create_admin.py   Script para crear un usuario administrador
+tests/            Pruebas con pytest (CSRF, permisos, compra, búsqueda)
 database/         Esquema SQL y catálogo de ejemplo
 templates/        Plantillas Jinja2
 static/           CSS, JS e imágenes

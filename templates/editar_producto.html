@@ -23,6 +23,7 @@
 <h1>Editar Producto</h1>
 
 <form action="" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
     <label>Nombre:</label><br>
     <input type="text" name="nombre" value="{{ producto.nombre }}" required><br><br>
