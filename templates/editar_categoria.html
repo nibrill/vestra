@@ -1,35 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Usuario - VESTRA</title>
-    <link rel="stylesheet" href="/static/style.css">    
-</head>
-
-{% with mensajes = get_flashed_messages(with_categories=true) %}
-    {% if mensajes %}
-        <div class="flash-container">
-            {% for categoria, mensaje in mensajes %}
-                <div class="flash {{ categoria }}">
-                    {{ mensaje }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
-
-
-
-<h1>Editar categoria</h1>
-<form method="POST">
+{% extends "admin_base.html" %}
+{% set active = 'categorias' %}
+{% block page_title %}Editar categoría{% endblock %}
+{% block page_sub %}{{ categoria.nombre }}{% endblock %}
+{% block admin_content %}
+<div class="card admin-form">
+    <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Nombre:</label><br>
-    <input type="text" name="nombre" value="{{ categoria['nombre'] }}"><br><br>
-
-   
-    <button type="submit">Guardar Cambios</button>
-</form>
-
-<br>
-<a href="/admin/categorias">Volver al panel</a>
+        <div class="field"><label for="nombre">Nombre</label><input id="nombre" type="text" name="nombre" value="{{ categoria.nombre }}" required></div>
+        <div class="form-actions"><button class="btn">Guardar cambios</button><a href="{{ url_for('admin_categoria') }}" class="btn btn-ghost">Cancelar</a></div>
+    </form>
+</div>
+{% endblock %}

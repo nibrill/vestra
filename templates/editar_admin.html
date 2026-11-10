@@ -1,41 +1,20 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Usuario - VESTRA</title>
-    <link rel="stylesheet" href="/static/style.css">    
-</head>
-
-{% with mensajes = get_flashed_messages(with_categories=true) %}
-    {% if mensajes %}
-        <div class="flash-container">
-            {% for categoria, mensaje in mensajes %}
-                <div class="flash {{ categoria }}">
-                    {{ mensaje }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-{% endwith %}
-
-<h1>Editar Usuario</h1>
-<form method="POST">
+{% extends "admin_base.html" %}
+{% set active = 'resumen' %}
+{% block page_title %}Editar usuario{% endblock %}
+{% block page_sub %}{{ usuario.correo }}{% endblock %}
+{% block admin_content %}
+<div class="card admin-form">
+    <form method="POST">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Nombre:</label><br>
-    <input type="text" name="nombre" value="{{ usuario['nombre'] }}"><br><br>
-
-    <label>Correo:</label><br>
-    <input type="email" name="correo" value="{{ usuario['correo'] }}"><br><br>
-
-    <label>Rol:</label><br>
-    <select name="rol">
-        <option value="usuario" {% if usuario[3]=='usuario' %}selected{% endif %}>Usuario</option>
-        <option value="admin" {% if usuario[3]=='admin' %}selected{% endif %}>Administrar</option>
-    </select><br><br>
-
-    <button type="submit">Guardar Cambios</button>
-</form>
-
-<br>
-<a href="/admin/categorias">Volver al panel</a>
+        <div class="field"><label for="nombre">Nombre</label><input id="nombre" type="text" name="nombre" value="{{ usuario.nombre }}" required></div>
+        <div class="field"><label for="correo">Correo</label><input id="correo" type="email" name="correo" value="{{ usuario.correo }}" required></div>
+        <div class="field"><label for="rol">Rol</label>
+            <select id="rol" name="rol">
+                <option value="usuario" {% if usuario.rol == 'usuario' %}selected{% endif %}>Usuario</option>
+                <option value="admin" {% if usuario.rol == 'admin' %}selected{% endif %}>Administrador</option>
+            </select>
+        </div>
+        <div class="form-actions"><button class="btn">Guardar cambios</button><a href="{{ url_for('admin_panel') }}" class="btn btn-ghost">Cancelar</a></div>
+    </form>
+</div>
+{% endblock %}

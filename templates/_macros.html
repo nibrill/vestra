@@ -1,0 +1,49 @@
+{# Tarjeta de producto reutilizable #}
+{% macro product_card(id, nombre, precio, imagen, stock=None, categoria=None) %}
+<article class="pcard reveal">
+    <div class="pcard__media">
+        {% if stock is not none and stock <= 0 %}<span class="pcard__badge" style="background:var(--danger)">Agotado</span>
+        {% elif stock is not none and stock <= 5 %}<span class="pcard__badge low">Últimas {{ stock }}</span>{% endif %}
+        <img src="{{ url_for('static', filename='img/' ~ imagen) }}" alt="{{ nombre }}" loading="lazy">
+        <form action="{{ url_for('toggle_favorito', producto_id=id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="pcard__fav {% if id in favoritos_ids %}active{% endif %}" aria-label="Favorito" title="Favorito">
+                <i class="{% if id in favoritos_ids %}fa-solid{% else %}fa-regular{% endif %} fa-heart"></i>
+            </button>
+        </form>
+        {% if stock is none or stock > 0 %}
+        <form class="pcard__quick" action="{{ url_for('agregar_carrito', producto_id=id) }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm {% if id in carrito_ids %}in-cart{% endif %}">
+                {% if id in carrito_ids %}<i class="fa-solid fa-check"></i> En el carrito{% else %}<i class="fa-solid fa-bag-shopping"></i> Agregar{% endif %}
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    <div class="pcard__info">
+        <div>
+            <a class="pcard__name pcard__link" href="{{ url_for('producto_detalle', producto_id=id) }}">{{ nombre }}</a>
+            {% if categoria %}<div class="pcard__cat">{{ categoria }}</div>{% endif %}
+        </div>
+        <div class="pcard__price">{{ precio|clp }}</div>
+    </div>
+</article>
+{% endmacro %}
+
+{# Tarjeta de pedido #}
+{% macro order_card(orden, items) %}
+<article class="order">
+    <div class="order__head">
+        <div><b>Pedido #{{ orden.id }}</b><small>{{ orden.creado_en.strftime('%d/%m/%Y · %H:%M') if orden.creado_en.strftime is defined else orden.creado_en }}</small></div>
+        <span class="pill {{ orden.estado }}">{{ orden.estado }}</span>
+        <b>{{ orden.total|clp }}</b>
+    </div>
+    <div class="order__items">
+        {% for item in items %}
+        <div class="order__item"><div>{{ item.nombre_producto }} <span>× {{ item.cantidad }}</span></div><div>{{ item.subtotal|clp }}</div></div>
+        {% else %}
+        <div class="order__item"><span>Sin detalle de productos.</span></div>
+        {% endfor %}
+    </div>
+</article>
+{% endmacro %}

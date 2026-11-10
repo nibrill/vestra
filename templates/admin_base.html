@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block chrome %}{% endblock %}
+{% block footer %}{% endblock %}
+{% block title %}Admin · VESTRA{% endblock %}
+{% block content %}
+<div class="admin">
+    <aside class="admin__side" id="adminSide">
+        <a href="{{ url_for('admin_panel') }}" class="brand"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""><span>VESTRA</span></a>
+        <nav aria-label="Administración">
+            <small>Gestión</small>
+            <a href="{{ url_for('admin_panel') }}" class="{% if active == 'resumen' %}active{% endif %}"><i class="fa-solid fa-gauge-high"></i> Resumen</a>
+            <a href="{{ url_for('admin_producto') }}" class="{% if active == 'productos' %}active{% endif %}"><i class="fa-solid fa-shirt"></i> Productos</a>
+            <a href="{{ url_for('admin_categoria') }}" class="{% if active == 'categorias' %}active{% endif %}"><i class="fa-solid fa-layer-group"></i> Categorías</a>
+            <a href="{{ url_for('admin_ordenes') }}" class="{% if active == 'ordenes' %}active{% endif %}"><i class="fa-solid fa-receipt"></i> Órdenes</a>
+        </nav>
+        <div class="bottom">
+            <a class="nav__link" style="color:#c3ccdf" href="{{ url_for('home') }}"><i class="fa-solid fa-store"></i> Ver tienda</a>
+            <button class="nav__link" style="color:#c3ccdf" data-theme-toggle><i class="fa-regular fa-moon"></i> Cambiar tema</button>
+            <a class="nav__link" style="color:#c3ccdf" href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar sesión</a>
+        </div>
+    </aside>
+    <section class="admin__main">
+        <div class="admin__top">
+            <div style="display:flex;align-items:center;gap:.8rem">
+                <button class="icon-btn admin-burger" data-toggle="#adminSide" aria-label="Menú"><i class="fa-solid fa-bars"></i></button>
+                <div>
+                    <h1>{% block page_title %}{% endblock %}</h1>
+                    <p>{% block page_sub %}{% endblock %}</p>
+                </div>
+            </div>
+            <div>{% block page_actions %}{% endblock %}</div>
+        </div>
+        {% block admin_content %}{% endblock %}
+    </section>
+</div>
+{% endblock %}

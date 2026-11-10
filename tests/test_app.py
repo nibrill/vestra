@@ -91,3 +91,40 @@ def test_compra_sin_stock_suficiente(client, db):
     t = token(client, "/checkout")
     r = client.post("/checkout", data={"csrf_token": t})
     assert r.status_code == 302 and r.headers["Location"].endswith("/carrito")
+
+
+def test_paginas_de_admin_renderizan(client, db):
+    correo = registrar_y_entrar(client, db)
+    cur = db.cursor()
+    cur.execute("UPDATE usuarios SET rol = 'admin' WHERE correo = %s", (correo,))
+    db.commit()
+    # el rol vive en la sesión: volver a iniciar sesión
+    client.get("/logout")
+    t = token(client)
+    client.post("/login", data={"correo": correo, "password": "secreto123", "csrf_token": t})
+    for ruta in ("/admin", "/admin/productos", "/admin/categorias", "/admin/ordenes",
+                 "/admin/productos/agregar", "/admin/productos/editar/1",
+                 "/admin/categorias/agregar", "/admin/categorias/editar/1"):
+        assert client.get(ruta).status_code == 200, ruta
+
+
+def test_cambiar_cantidad_en_carrito(client, db):
+    registrar_y_entrar(client, db)
+    cur = db.cursor()
+    cur.execute("SELECT id FROM productos WHERE stock > 5 LIMIT 1")
+    pid = cur.fetchone()[0]
+    t = token(client, f"/producto/{pid}")
+    client.post(f"/carrito/agregar/{pid}", data={"csrf_token": t})
+    db.commit()
+    cur.execute("SELECT ci.id FROM carrito_items ci JOIN usuarios u ON u.id = ci.usuario_id "
+                "ORDER BY ci.id DESC LIMIT 1")
+    item = cur.fetchone()[0]
+    t = token(client, "/carrito")
+    client.post(f"/carrito/cantidad/{item}", data={"delta": "1", "csrf_token": t})
+    db.commit()
+    cur.execute("SELECT cantidad FROM carrito_items WHERE id = %s", (item,))
+    assert cur.fetchone()[0] == 2
+
+
+def test_producto_inexistente_404(client):
+    assert client.get("/producto/999999").status_code == 404

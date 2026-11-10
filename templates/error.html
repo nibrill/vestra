@@ -1,30 +1,12 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ titulo }} - VESTRA</title>
-    <link rel="icon" href="/static/img/logo.png" type="image/png">
-    <style>
-        body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
-               background:#0f172a; color:#f7f5f2; font-family:"Poppins", Arial, sans-serif; text-align:center; padding:24px; }
-        .box { max-width:460px; }
-        img { width:72px; margin-bottom:12px; }
-        .code { font-size:88px; font-weight:700; color:#c8a96a; line-height:1; margin:0; }
-        h1 { font-size:26px; margin:12px 0 8px; color:#f7f5f2; }
-        p { color:#cbd5e1; font-size:16px; margin:0 0 24px; }
-        a { display:inline-block; background:#c8a96a; color:#0f172a; text-decoration:none; font-weight:600;
-            padding:12px 28px; border-radius:8px; }
-        a:hover { background:#d9bd85; }
-    </style>
-</head>
-<body>
-    <div class="box">
-        <img src="/static/img/logo.png" alt="VESTRA">
-        <p class="code">{{ codigo }}</p>
-        <h1>{{ titulo }}</h1>
-        <p>{{ detalle }}</p>
-        <a href="/">Volver al inicio</a>
+{% extends "base.html" %}
+{% block title %}{{ titulo }} · VESTRA{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="success" style="padding:clamp(3rem,10vw,7rem) 0">
+        <div style="font-family:var(--font-display);font-weight:800;font-size:clamp(5rem,16vw,10rem);line-height:.9;letter-spacing:-.06em;background:linear-gradient(120deg,var(--gold),#f1dcab 50%,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent">{{ codigo }}</div>
+        <h1 style="margin-top:1rem">{{ titulo }}</h1>
+        <p class="muted" style="margin-bottom:2rem">{{ detalle }}</p>
+        <a href="{{ url_for('home') }}" class="btn btn-lg"><i class="fa-solid fa-arrow-left"></i> Volver al inicio</a>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

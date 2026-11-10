@@ -5,28 +5,39 @@
 
 ## Características
 
+- **Diseño moderno**: sistema de diseño propio (sin Bootstrap), tipografía display, hero editorial, bento de colecciones, tarjetas con acciones rápidas, animaciones suaves, **modo oscuro** y diseño responsive
 - **Catálogo**: navegación por categorías, búsqueda, filtro por precio y ordenamiento
 - **Cuentas de usuario**: registro, inicio de sesión con bcrypt, bloqueo tras 3 intentos fallidos, perfil, cambio de correo y contraseña
 - **Favoritos y carrito**: persistentes por usuario, con contadores en la barra de navegación
 - **Checkout y órdenes**: historial de compras y confirmación de pedido (sin pasarela de pago real; las órdenes se guardan solo con fines de demostración)
-- **Panel de administración**: gestión de usuarios, productos (con subida de imágenes), categorías y órdenes
+- **Panel de administración**: dashboard con métricas, y gestión de usuarios, productos (con arrastrar y soltar imágenes), categorías y órdenes
 - **Seguridad**: protección CSRF en todos los formularios, acciones destructivas solo por POST, consultas SQL parametrizadas, sanitización con `bleach`, control de acceso por rol, subidas de imágenes validadas con nombre único y límite de 5 MB, sesiones regeneradas al iniciar sesión, cabeceras de seguridad y secretos por variables de entorno
 - **Compra atómica**: el checkout bloquea el stock (`SELECT ... FOR UPDATE`), valida disponibilidad y descuenta todo en una sola transacción
 - **Pruebas automáticas**: suite de `pytest` ejecutada en GitHub Actions contra MariaDB
 
 ## Capturas
 
-| Inicio | Catálogo con filtros |
+![Inicio](docs/screenshots/inicio.png)
+
+| Modo oscuro | Móvil |
 |---|---|
-| ![Inicio](docs/screenshots/inicio.png) | ![Categoría](docs/screenshots/categoria.png) |
-| **Detalle de producto** | **Carrito** |
-| ![Producto](docs/screenshots/producto.png) | ![Carrito](docs/screenshots/carrito.png) |
-| **Panel admin: productos** | **Panel admin: órdenes** |
-| ![Admin productos](docs/screenshots/admin-productos.png) | ![Admin órdenes](docs/screenshots/admin-ordenes.png) |
+| ![Modo oscuro](docs/screenshots/inicio-oscuro.png) | ![Móvil](docs/screenshots/movil.png) |
+
+| Catálogo con filtros | Detalle de producto |
+|---|---|
+| ![Catálogo](docs/screenshots/categoria.png) | ![Producto](docs/screenshots/producto.png) |
+
+| Carrito | Inicio de sesión |
+|---|---|
+| ![Carrito](docs/screenshots/carrito.png) | ![Login](docs/screenshots/login.png) |
+
+| Panel de administración | Gestión de productos |
+|---|---|
+| ![Admin](docs/screenshots/admin.png) | ![Admin productos](docs/screenshots/admin-productos.png) |
 
 ## Tecnologías
 
-Python · Flask · MySQL/MariaDB · Jinja2 · HTML/CSS · Bootstrap · Font Awesome
+Python · Flask · MySQL/MariaDB · Jinja2 · HTML/CSS (design system propio) · JavaScript vanilla · Font Awesome
 
 ## Puesta en marcha
 
@@ -43,6 +54,17 @@ flask --app app run
 
 Define también `COOKIE_SECURE=1` si sirves el sitio con HTTPS. Exporta las variables de `.env` (`SECRET_KEY`, `DB_*`) en tu terminal antes de ejecutar.
 
+## Vista previa sin base de datos
+
+¿Quieres ver el diseño sin instalar MySQL? El servidor de demostración carga el catálogo desde `database/schema.sql` en memoria:
+
+```bash
+python tests/demo_server.py          # http://localhost:5056
+# /__demo/usuario?next=/carrito  -> entra como cliente de ejemplo
+# /__demo/admin?next=/admin      -> entra como administrador
+# añade ?theme=dark a cualquier URL para ver el modo oscuro
+```
+
 ## Pruebas
 
 ```bash
@@ -56,10 +78,11 @@ pytest -q          # requiere la base `vestra` cargada y las variables DB_* conf
 app.py            Rutas de Flask y lógica de negocio
 connection.py     Conexión a MySQL (configurada por entorno)
 create_admin.py   Script para crear un usuario administrador
-tests/            Pruebas con pytest (CSRF, permisos, compra, búsqueda)
+tests/            Pruebas con pytest, smoke test de plantillas y servidor de demo
+docs/             Capturas de pantalla
 database/         Esquema SQL y catálogo de ejemplo
 templates/        Plantillas Jinja2
-static/           CSS, JS e imágenes
+static/           css/vestra.css (design system), js/vestra.js e imágenes
 ```
 
 ## Notas

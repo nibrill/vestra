@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}VESTRA · Moda con carácter{% endblock %}</title>
+    <meta name="description" content="{% block description %}VESTRA: tienda de ropa online con catálogo, favoritos, carrito y panel de administración.{% endblock %}">
+    <meta name="theme-color" content="#0b1220">
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.svg') }}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/vestra.css') }}">
+    <script>
+        (function(){document.documentElement.classList.add('js');try{var q=new URLSearchParams(location.search).get('theme');var t=(q==='dark'||q==='light')?q:localStorage.getItem('vestra-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.dataset.theme=t}catch(e){}})();
+    </script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+{% block chrome %}
+    <div class="announce">Envíos a todo Chile · <b>Cambios gratis por 30 días</b> · Proyecto demo open source</div>
+
+    <header class="nav">
+        <div class="container nav__inner">
+            <button class="icon-btn burger" data-toggle="#drawer" aria-label="Abrir menú"><i class="fa-solid fa-bars-staggered"></i></button>
+            <a href="{{ url_for('home') }}" class="brand" aria-label="VESTRA inicio">
+                <img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""><span>VESTRA</span>
+            </a>
+            <nav class="nav__links" aria-label="Principal">
+                <div class="has-menu">
+                    <a href="#" class="nav__link" onclick="return false">Colecciones <i class="fa-solid fa-chevron-down" style="font-size:.6rem"></i></a>
+                    <div class="menu">
+                        {% for nombre, slug in nav_categorias %}
+                        <a href="{{ url_for('categoria', slug=slug) }}">{{ nombre }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% for nombre, slug in nav_categorias[:4] %}
+                <a href="{{ url_for('categoria', slug=slug) }}" class="nav__link">{{ nombre }}</a>
+                {% endfor %}
+            </nav>
+
+            <form class="search" action="{{ url_for('buscar') }}" method="GET" role="search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" name="q" placeholder="Buscar prendas, categorías…" value="{{ request.args.get('q', '') }}" aria-label="Buscar productos">
+            </form>
+
+            <div class="nav__actions">
+                <button class="icon-btn" data-theme-toggle aria-label="Cambiar tema"><i class="fa-regular fa-moon"></i></button>
+                <a href="{{ url_for('ver_favoritos') }}" class="icon-btn" aria-label="Favoritos">
+                    <i class="fa-regular fa-heart"></i>
+                    {% if favoritos_count > 0 %}<span class="badge-dot">{{ favoritos_count }}</span>{% endif %}
+                </a>
+                <a href="{{ url_for('ver_carrito') }}" class="icon-btn" aria-label="Carrito">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    {% if carrito_cantidad > 0 %}<span class="badge-dot">{{ carrito_cantidad }}</span>{% endif %}
+                </a>
+                {% if session.get('usuario_id') %}
+                <details class="user-menu">
+                    <summary aria-label="Mi cuenta"><span class="avatar">{{ (session.get('usuario_nombre') or 'U')[0]|upper }}</span></summary>
+                    <div class="dropdown">
+                        <div class="who"><b>{{ session.get('usuario_nombre') }}</b><span>{{ session.get('usuario_correo') }}</span></div>
+                        <a href="{{ url_for('panel') }}"><i class="fa-regular fa-user"></i> Mi cuenta</a>
+                        <a href="{{ url_for('historial') }}"><i class="fa-solid fa-box"></i> Mis pedidos</a>
+                        <a href="{{ url_for('ver_favoritos') }}"><i class="fa-regular fa-heart"></i> Favoritos</a>
+                        {% if session.get('rol') == 'admin' %}<a href="{{ url_for('admin_panel') }}"><i class="fa-solid fa-gauge-high"></i> Panel admin</a>{% endif %}
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar sesión</a>
+                    </div>
+                </details>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-sm" style="margin-left:.5rem">Ingresar</a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <aside class="drawer" id="drawer" aria-label="Menú">
+        <div class="drawer-head">
+            <a href="{{ url_for('home') }}" class="brand"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""><span>VESTRA</span></a>
+            <button class="icon-btn" data-toggle="#drawer" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <h4>Colecciones</h4>
+        {% for nombre, slug in nav_categorias %}
+        <a class="dl" href="{{ url_for('categoria', slug=slug) }}">{{ nombre }} <i class="fa-solid fa-arrow-right" style="font-size:.8rem"></i></a>
+        {% endfor %}
+        <h4>Cuenta</h4>
+        {% if session.get('usuario_id') %}
+        <a class="dl" href="{{ url_for('panel') }}">Mi cuenta</a>
+        <a class="dl" href="{{ url_for('logout') }}">Cerrar sesión</a>
+        {% else %}
+        <a class="dl" href="{{ url_for('login') }}">Ingresar</a>
+        <a class="dl" href="{{ url_for('registro') }}">Crear cuenta</a>
+        {% endif %}
+    </aside>
+    <div class="drawer-backdrop"></div>
+{% endblock %}
+
+    <div class="toasts" role="status" aria-live="polite">
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in mensajes %}
+        <div class="toast {{ cat }}">
+            <i class="fa-solid {% if cat == 'success' %}fa-circle-check{% elif cat in ('error','danger') %}fa-circle-exclamation{% elif cat == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+            <span>{{ msg }}</span>
+        </div>
+        {% endfor %}
+        {% endwith %}
+    </div>
+
+    <main>{% block content %}{% endblock %}</main>
+
+{% block footer %}
+    <footer class="footer">
+        <div class="container">
+            <div class="footer__grid">
+                <div>
+                    <a href="{{ url_for('home') }}" class="brand"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt=""><span>VESTRA</span></a>
+                    <p>Moda urbana con carácter. Un proyecto open source hecho con Flask y MySQL para aprender y reutilizar.</p>
+                    <a class="btn btn-ghost btn-sm" href="https://github.com/nibrill/vestra" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> Ver en GitHub</a>
+                </div>
+                <div>
+                    <h4>Tienda</h4>
+                    <ul>{% for nombre, slug in nav_categorias[:5] %}<li><a href="{{ url_for('categoria', slug=slug) }}">{{ nombre }}</a></li>{% endfor %}</ul>
+                </div>
+                <div>
+                    <h4>Más</h4>
+                    <ul>{% for nombre, slug in nav_categorias[5:10] %}<li><a href="{{ url_for('categoria', slug=slug) }}">{{ nombre }}</a></li>{% endfor %}</ul>
+                </div>
+                <div>
+                    <h4>Cuenta</h4>
+                    <ul>
+                        <li><a href="{{ url_for('panel') }}">Mi cuenta</a></li>
+                        <li><a href="{{ url_for('historial') }}">Mis pedidos</a></li>
+                        <li><a href="{{ url_for('ver_favoritos') }}">Favoritos</a></li>
+                        <li><a href="{{ url_for('ver_carrito') }}">Carrito</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer__bottom">
+                <span>© 2026 VESTRA · Licencia MIT</span>
+                <span>Demo sin pagos reales · Hecho en Chile 🇨🇱</span>
+            </div>
+        </div>
+    </footer>
+{% endblock %}
+    <script src="{{ url_for('static', filename='js/vestra.js') }}" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

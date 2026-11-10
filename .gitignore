@@ -7,3 +7,9 @@ venv/
 webapp (1).sql
 estudio.html
 documentacion*.docx
+
+# archivos locales
+_archivo_local/
+.edgeprof/
+.demo.*
+.smoke.txt

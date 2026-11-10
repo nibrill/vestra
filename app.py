@@ -102,9 +102,23 @@ def password_valida(password):
 def home():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM productos LIMIT 5")  # Ajusta la consulta para obtener productos
+    cursor.execute("""SELECT id, nombre, descripcion, precio, stock, imagen, categoria_id
+                      FROM productos WHERE stock > 0
+                      ORDER BY fecha_creacion DESC, id DESC LIMIT 8""")
     productos = cursor.fetchall()
-    return render_template("index.html", productos=productos)
+    cursor.execute("""SELECT c.nombre, c.slug, COUNT(p.id) AS n,
+                             (SELECT imagen FROM productos WHERE categoria_id = c.id ORDER BY id LIMIT 1)
+                      FROM categorias c LEFT JOIN productos p ON p.categoria_id = c.id
+                      GROUP BY c.id, c.nombre, c.slug
+                      HAVING n > 0
+                      ORDER BY n DESC, c.nombre LIMIT 6""")
+    cats_home = cursor.fetchall()
+    cursor.execute("SELECT COUNT(*) FROM productos")
+    total_productos = cursor.fetchone()[0]
+    cursor.close()
+    conn.close()
+    return render_template("index.html", productos=productos, cats_home=cats_home,
+                           total_productos=total_productos)
 
 
 
@@ -372,12 +386,20 @@ def admin_panel():
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nombre, correo, rol FROM usuarios")
+    cursor.execute("SELECT id, nombre, correo, rol FROM usuarios ORDER BY id")
     usuarios = cursor.fetchall()
+    cursor.execute("SELECT COUNT(*) FROM productos")
+    n_productos = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*), COALESCE(SUM(CASE WHEN estado <> 'cancelada' THEN total END), 0) FROM ordenes")
+    n_ordenes, ingresos = cursor.fetchone()
+    cursor.execute("SELECT COUNT(*) FROM productos WHERE stock <= 3")
+    stock_bajo = cursor.fetchone()[0]
     cursor.close()
     conn.close()
 
-    return render_template("admin.html", usuarios=usuarios)
+    stats = {"usuarios": len(usuarios), "productos": n_productos, "ordenes": n_ordenes,
+             "ingresos": int(ingresos), "stock_bajo": stock_bajo}
+    return render_template("admin.html", usuarios=usuarios, stats=stats)
       
 
 @app.route("/admin/editar/<id>", methods=["GET","POST"])
@@ -461,7 +483,9 @@ def admin_producto():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id,nombre,descripcion,precio,stock,imagen,categoria_id FROM productos")
+    cursor.execute("""SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen, c.nombre
+                      FROM productos p LEFT JOIN categorias c ON p.categoria_id = c.id
+                      ORDER BY p.id""")
     productos = cursor.fetchall()
 
         
@@ -706,6 +730,34 @@ def agregar_carrito(producto_id):
     flash("Producto agregado al carrito.", "success")
     return redirect(request.referrer or "/")
 
+@app.route("/carrito/cantidad/<int:item_id>", methods=["POST"])
+def cambiar_cantidad(item_id):
+    if "usuario_id" not in session:
+        return redirect("/login")
+
+    delta = 1 if request.form.get("delta") == "1" else -1
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""SELECT ci.cantidad, p.stock FROM carrito_items ci
+                      JOIN productos p ON p.id = ci.producto_id
+                      WHERE ci.id = %s AND ci.usuario_id = %s""", (item_id, session["usuario_id"]))
+    fila = cursor.fetchone()
+    if fila:
+        nueva = fila[0] + delta
+        if nueva < 1:
+            cursor.execute("DELETE FROM carrito_items WHERE id = %s AND usuario_id = %s",
+                           (item_id, session["usuario_id"]))
+        elif nueva > fila[1]:
+            flash(f"Solo quedan {fila[1]} unidades disponibles.", "warning")
+        else:
+            cursor.execute("UPDATE carrito_items SET cantidad = %s WHERE id = %s AND usuario_id = %s",
+                           (nueva, item_id, session["usuario_id"]))
+        conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("ver_carrito"))
+
+
 @app.route("/carrito/eliminar/<int:item_id>", methods=["POST"])
 def eliminar_item_carrito(item_id):
     if "usuario_id" not in session:
@@ -786,20 +838,28 @@ def ver_favoritos():
 
 
 @app.route("/producto/<int:producto_id>")
-def producto_detalle(producto_id): 
-
+def producto_detalle(producto_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen, c.nombre as categoria
-                   FROM productos p
-                   LEFT JOIN categorias c ON p.categoria_id = c.id
-                   WHERE p.id = %s """, (producto_id,))
+    cursor.execute("""SELECT p.id, p.nombre, p.descripcion, p.precio, p.stock, p.imagen,
+                             c.nombre AS categoria, c.slug, p.categoria_id
+                      FROM productos p
+                      LEFT JOIN categorias c ON p.categoria_id = c.id
+                      WHERE p.id = %s""", (producto_id,))
     producto = cursor.fetchone()
+    if not producto:
+        cursor.close()
+        conn.close()
+        abort(404)
 
+    cursor.execute("""SELECT id, nombre, precio, imagen FROM productos
+                      WHERE categoria_id = %s AND id <> %s AND stock > 0
+                      ORDER BY id LIMIT 4""", (producto[8], producto_id))
+    relacionados = cursor.fetchall()
     cursor.close()
     conn.close()
-    
-    return render_template("producto_detalle.html", producto=producto)
+
+    return render_template("producto_detalle.html", producto=producto, relacionados=relacionados)
 
 
 @app.route("/perfil" , methods=["GET","POST"])
@@ -1103,8 +1163,8 @@ def categoria(slug):
     cursor.execute("""
         SELECT id, nombre
         FROM categorias
-        WHERE LOWER(nombre) = %s
-    """, (slug.replace("-", " "),))
+        WHERE slug = %s
+    """, (slug,))
 
     categoria = cursor.fetchone()
     if not categoria:
@@ -1145,7 +1205,9 @@ def categoria(slug):
         "categorias/categoria.html",
         productos=productos,
         categoria_nombre=categoria[1],
-        categoria_slug=slug
+        categoria_slug=slug,
+        precio_activo=precio or "",
+        orden_activo=orden,
     )
 
 
@@ -1184,7 +1246,7 @@ def admin_categorias_agregar():
 @app.context_processor
 def contexto_global():
     """Una sola conexion por render: categorias, carrito y favoritos del usuario."""
-    ctx = {"csrf_token": csrf_token, "categorias": [], "carrito_cantidad": 0,
+    ctx = {"csrf_token": csrf_token, "nav_categorias": [], "cat_opciones": [], "carrito_cantidad": 0,
            "carrito_ids": [], "favoritos_ids": [], "favoritos_count": 0}
     try:
         conn = get_connection()
@@ -1192,8 +1254,10 @@ def contexto_global():
         return ctx
     try:
         cur = conn.cursor()
-        cur.execute("SELECT nombre, slug FROM categorias ORDER BY nombre ASC")
-        ctx["categorias"] = cur.fetchall()
+        cur.execute("SELECT id, nombre, slug FROM categorias ORDER BY nombre ASC")
+        filas_cat = cur.fetchall()
+        ctx["nav_categorias"] = [(f[1], f[2]) for f in filas_cat]
+        ctx["cat_opciones"] = [(f[0], f[1]) for f in filas_cat]
         uid = session.get("usuario_id")
         if uid:
             cur.execute("SELECT producto_id, cantidad FROM carrito_items WHERE usuario_id = %s", (uid,))
