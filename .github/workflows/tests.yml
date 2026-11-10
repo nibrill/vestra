@@ -24,5 +24,5 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Cargar esquema
-        run: sudo apt-get install -y -qq mariadb-client && mysql -h127.0.0.1 -uroot -proot < database/schema.sql
+        run: sudo apt-get install -y -qq mariadb-client && mysql --skip-ssl -h127.0.0.1 -uroot -proot < database/schema.sql
       - run: pytest -q
